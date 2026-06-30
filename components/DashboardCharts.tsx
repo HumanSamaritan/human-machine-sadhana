@@ -26,7 +26,7 @@ function groupWindow(entries: DailyEntry[], days: number) {
   return entries.filter(e => e.entry_date >= start)
 }
 
-function function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[] }) {
+function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[] }) {
   const moodByDate = new Map(moods.map(m => [m.entry_date, m]))
 
   const data = entries.slice(-14).map(e => {
