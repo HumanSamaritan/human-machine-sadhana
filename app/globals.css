@@ -111,3 +111,51 @@ input[type="range"] { padding:0; accent-color: var(--gold); }
   .hero-card, .hero-card img { min-height: 360px; height: 360px; }
   .bar-row { grid-template-columns: 1fr; }
 }
+.icon-nav {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.2rem;
+  padding: 0 !important;
+}
+
+.menu-wrap {
+  position: relative;
+}
+
+.quick-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(13, 29, 49, .98);
+  box-shadow: var(--shadow);
+  z-index: 100;
+}
+
+.quick-menu a,
+.quick-menu button {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+}
+
+.quick-menu a:hover,
+.quick-menu button:hover {
+  background: rgba(255,255,255,.1);
+}
