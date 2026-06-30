@@ -6,7 +6,14 @@ import { calculateScores, zone } from "@/lib/scoring"
 import { MetricCard } from "./MetricCard"
 import type { DailyEntry } from "@/lib/constants"
 
-type MoodEntry = { entry_date: string; mood_score: number | null; energy_score: number | null; stress_score: number | null }
+type MoodEntry = {
+  entry_date: string
+  mood_score: number | null
+  energy_score: number | null
+  stress_score: number | null
+  factors?: string[] | null
+  note?: string | null
+}
 type GratitudeEntry = { entry_date: string; item_count: number }
 type PredictionFeedback = { entry_date: string; predicted_energy: number | null; actual_energy: number | null; prediction_delta: number | null }
 
