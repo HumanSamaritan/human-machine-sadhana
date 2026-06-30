@@ -96,17 +96,19 @@ export function MoodLogger() {
             <div className="field"><label>Timing</label><select value={moodTime} onChange={e => setMoodTime(e.target.value)}><option value="during_day">During the day</option><option value="end_of_day">End of day</option><option value="weekly_review">Weekly review</option></select></div>
           </div>
           <div className="field">
-         <label>Mood: {moodScore ? `${moodScore}/10 — ${valence}` : "Not entered"}</label>
-            <input type="range" min="0" max="10" value={moodScore} onChange={e => setMoodScore(Number(e.target.value))} />
+          <label>Mood: {moodScore ? `${moodScore}/10 — ${valence}` : "Not entered"}</label>
+          <input type="range" min="0" max="10" value={moodScore} onChange={e => setMoodScore(Number(e.target.value))} />
           </div>
-          <div className="field">
-            <label>Actual Energy: {energyScore ? `${energyScore}/10` : "Not entered"}</label> {energyScore}/10</label>
-            <input type="range" min="0" max="10" value={energyScore} onChange={e => setEnergyScore(Number(e.target.value))} />
-          </div>
-          <div className="field">
-            <label>Stress / Load: {stressScore ? `${stressScore}/10` : "Not entered"}</label>
-            <input type="range" min="0" max="10" value={stressScore} onChange={e => setStressScore(Number(e.target.value))} />
-          </div>
+
+         <div className="field">
+         <label>Actual Energy: {energyScore ? `${energyScore}/10` : "Not entered"}</label>
+         <input type="range" min="0" max="10" value={energyScore} onChange={e => setEnergyScore(Number(e.target.value))} />
+         </div>
+
+         <div className="field">
+         <label>Stress / Load: {stressScore ? `${stressScore}/10` : "Not entered"}</label>
+         <input type="range" min="0" max="10" value={stressScore} onChange={e => setStressScore(Number(e.target.value))} />
+         </div>
           <div className="field"><label>Additional context</label><textarea value={note} onChange={e => setNote(e.target.value)} placeholder="What influenced the mood today?" /></div>
           <button className="primary-btn" onClick={save}>Save Mood</button>
           {status ? <p className="success">{status}</p> : null}
