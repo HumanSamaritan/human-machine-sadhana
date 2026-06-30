@@ -40,7 +40,7 @@ function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[
     const mood = moodByDate.get(e.entry_date)
     return {
       date: e.entry_date.slice(5),
-      predicted: Number(e.predicted_next_day_energy ?? 0.predicted_next_day_energy ?? 0),
+      predicted: Number(e.predicted_next_day_energy ?? 0),
       actual: Number(mood?.energy_score ?? 0) * 10
     }
   })
