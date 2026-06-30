@@ -70,16 +70,18 @@ function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[
       <text x="190" y="24" fill="#69E7FF" fontSize="14">Actual energy</text>
 
       {data.map((d, i) => {
-        const x = 48 + i * groupWidth
+      const groupX = data.length === 1 ? 72 : 52 + i * groupWidth
+      const predictedX = groupX
+      const actualX = groupX + barWidth + 8        
         const predictedHeight = (Math.max(0, Math.min(100, d.predicted)) / 100) * chartHeight
         const actualHeight = (Math.max(0, Math.min(100, d.actual)) / 100) * chartHeight
         const baseY = chartTop + chartHeight
 
         return (
           <g key={`${d.date}-${i}`}>
-            <rect x={x} y={baseY - predictedHeight} width={barWidth} height={predictedHeight} rx="4" fill="#F3C768" />
-            <rect x={x + barWidth + 4} y={baseY - actualHeight} width={barWidth} height={actualHeight} rx="4" fill="#69E7FF" opacity={d.actual ? 1 : .18} />
-            <text x={x - 2} y={height - 14} fill="#aebcd0" fontSize="10">{d.date}</text>
+            <rect x={predictedX} y={baseY - predictedHeight} width={barWidth} height={predictedHeight} rx="4" fill="#F3C768" />
+            <rect x={actualX} y={baseY - actualHeight} width={barWidth} height={actualHeight} rx="4" fill="#69E7FF" opacity={d.actual ? 1 : .18} />
+            <text x={groupX} y={height - 14} fill="#aebcd0" fontSize="10">{d.date}</text>
           </g>
         )
       })}
