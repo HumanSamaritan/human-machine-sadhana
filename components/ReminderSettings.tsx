@@ -70,7 +70,7 @@ export function ReminderSettings() {
     <div className="container section">
       <span className="kicker">Reminder settings</span>
       <h2>One daily email prompt</h2>
-      <p>Reminders are sent to the user's Gmail/email account once per day. Use Supabase + Resend and a daily scheduler if you want the reminder to run automatically.</p>
+      <p>Reminders are sent to the user's Gmail/email account once per day.</p>
       <div className="form-card">
         <div className="grid grid-3">
           <div className="field"><label>Email</label><input value={settings.email} onChange={e => set("email", e.target.value)} /></div>
