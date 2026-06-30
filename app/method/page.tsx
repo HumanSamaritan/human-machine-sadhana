@@ -11,6 +11,8 @@ const sources = [
 export default function MethodPage() {
   return (
       <main className="container section">
+         <a className="ghost-btn icon-nav" href="/" aria-label="Back to Home" title="Back to Home" style={{ marginBottom: 20 }}> ⌂
+         </a>
         <span className="kicker">Scoring method</span>
         <h2>The Human + Machine Sadhana model</h2>
         <p>
