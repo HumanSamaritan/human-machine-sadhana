@@ -113,7 +113,7 @@ export function DashboardCharts() {
       if (!data.user) { window.location.href = "/"; return }
       const [daily, mood, grat, prediction] = await Promise.all([
         supabase.from("daily_entries").select("*").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
-        supabase .from("mood_entries").select("entry_date,mood_score,energy_score,stress_score,factors,note").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
+        supabase.from("mood_entries").select("entry_date,mood_score,energy_score,stress_score,factors,note").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
         supabase.from("gratitude_entries").select("entry_date,item_count").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
         supabase.from("prediction_feedback").select("entry_date,predicted_energy,actual_energy,prediction_delta").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120)
       ])
