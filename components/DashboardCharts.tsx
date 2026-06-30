@@ -129,7 +129,7 @@ export function DashboardCharts() {
   const latestScores = latest ? calculateScores(latest) : null
   const weekly = groupWindow(entries, 7)
   const monthly = groupWindow(entries, 30)
-  const latestMood = moods[moods.length - 1]
+  const latestMood = latest ? moods.find(m => m.entry_date === latest.entry_date):undefined
 
   const summary = useMemo(() => {
     const score = (e: DailyEntry) => e.wellbeing_score ?? calculateScores(e).wellbeing_score
