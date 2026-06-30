@@ -71,11 +71,21 @@ p { color: var(--muted); line-height:1.7; }
 .field { display:grid; gap:8px; margin-bottom:14px; }
 .field label { font-weight:700; color:#eaf0f7; }
 input, select, textarea {
-  width:100%; border:1px solid var(--border); border-radius:16px; background: rgba(255,255,255,.08); color:var(--text); padding:12px 14px; outline:none;
+  width:100%;
+  min-width:0; border:1px solid var(--border); border-radius:16px; background: rgba(255,255,255,.08); color:var(--text); padding:12px 14px; outline:none;
 }
 select option { color:#111827; }
 textarea { min-height: 120px; resize: vertical; }
-.range-line { display:grid; grid-template-columns: 1fr 56px; gap:10px; align-items:center; }
+.range-line { display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(84px, 104px);
+  gap: 12px;
+  align-items: center;
+}.range-line input[type="number"] {
+  text-align: center;
+  padding: 12px 10px;
+  font-weight: 800;
+  font-size: clamp(.95rem, 2.4vw, 1.05rem);
+}
 input[type="range"] { padding:0; accent-color: var(--gold); }
 .pill { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:999px; padding:8px 12px; color:var(--muted); background: rgba(255,255,255,.05); }
 .metric-card { padding:18px; min-height:124px; }
