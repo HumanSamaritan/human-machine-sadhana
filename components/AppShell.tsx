@@ -8,6 +8,7 @@ import type { User } from "@supabase/supabase-js"
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient()
@@ -35,16 +36,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="logo"><img src="/sadhana-mark.svg" alt="" /></span>
             <span>Human + Machine Sadhana</span>
           </Link>
-          <nav className="nav-links">
-            <Link href="/" className="icon-nav" title="Home" aria-label="Home">⌂</Link>
-            <Link href="/entry">Daily Entry</Link>
-            <Link href="/mood">Mood</Link>
-            <Link href="/gratitude">Gratitude</Link>
-            <Link href="/dashboard">Dashboard</Link>
-            <Link href="/settings" className="icon-nav" title="Settings" aria-label="Settings">⚙</Link>   
-            <Link href="/method">Method</Link>
-            {user ? <button className="ghost-btn" onClick={signOut}>Sign out</button> : <Link href="/">Login</Link>}
-          </nav>
+         <nav className="nav-links">
+  <Link href="/entry">Data Capture</Link>
+  <Link href="/mood">Mood</Link>
+  <Link href="/gratitude">Gratitude</Link>
+  <Link href="/method">Method</Link>
+
+  <div className="menu-wrap">
+    <button
+      className="ghost-btn icon-nav"
+      onClick={() => setMenuOpen(prev => !prev)}
+      title="Menu"
+      aria-label="Menu"
+      aria-expanded={menuOpen}
+    >
+      ☰
+    </button>
+
+    {menuOpen ? (
+      <div className="quick-menu">
+        <Link href="/" onClick={() => setMenuOpen(false)}>Home</Link>
+        <Link href="/dashboard" onClick={() => setMenuOpen(false)}>Dashboard</Link>
+        <Link href="/settings" onClick={() => setMenuOpen(false)}>Settings</Link>
+        {user ? (
+          <button onClick={signOut}>Sign out</button>
+        ) : (
+          <Link href="/" onClick={() => setMenuOpen(false)}>Sign in</Link>
+        )}
+      </div>
+    ) : null}
+  </div>
+</nav>
         </div>
       </header>
       {loading ? <main className="container section"><p>Loading session...</p></main> : children}
