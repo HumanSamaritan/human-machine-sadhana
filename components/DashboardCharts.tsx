@@ -113,7 +113,7 @@ export function DashboardCharts() {
       if (!data.user) { window.location.href = "/"; return }
       const [daily, mood, grat, prediction] = await Promise.all([
         supabase.from("daily_entries").select("*").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
-        supabase.from("mood_entries").select("entry_date,mood_score,energy_score,stress_score").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
+        supabase .from("mood_entries").select("entry_date,mood_score,energy_score,stress_score,factors,note").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
         supabase.from("gratitude_entries").select("entry_date,item_count").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
         supabase.from("prediction_feedback").select("entry_date,predicted_energy,actual_energy,prediction_delta").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120)
       ])
@@ -148,6 +148,38 @@ export function DashboardCharts() {
       personalizedNextEnergy: Math.max(0, Math.min(100, rawNextEnergy + forecastAdjustment))
     }
   }, [weekly, monthly, gratitude, feedback, latestScores])
+
+  const behaviorTrend = useMemo(() => {
+  if (!moods.length) {
+    return "Add mood entries to reveal behavior patterns across mood, stress, energy and life factors."
+  }
+
+  const recent = moods.slice(-7)
+  const avgMood = avg(recent.map(m => Number(m.mood_score ?? 0) * 10))
+  const avgEnergy = avg(recent.map(m => Number(m.energy_score ?? 0) * 10))
+  const avgStress = avg(recent.map(m => Number(m.stress_score ?? 0) * 10))
+
+  const factorCounts = new Map<string, number>()
+  recent.forEach(m => {
+    ;(m.factors ?? []).forEach(f => factorCounts.set(f, (factorCounts.get(f) ?? 0) + 1))
+  })
+
+  const topFactor = [...factorCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+
+  if (avgStress >= 70) {
+    return `Recent pattern: stress is high at ${avgStress}/100${topFactor ? `, often linked with ${topFactor}` : ""}. Reduce overload and protect recovery.`
+  }
+
+  if (avgMood >= 75 && avgEnergy >= 75) {
+    return `Recent pattern: mood and energy are strong${topFactor ? `, with ${topFactor} appearing often` : ""}. Continue this rhythm and observe what sustains it.`
+  }
+
+  if (avgEnergy < 50) {
+    return `Recent pattern: energy is low at ${avgEnergy}/100${topFactor ? `, often linked with ${topFactor}` : ""}. Improve sleep, food tracking and movement.`
+  }
+
+  return `Recent pattern: mood ${avgMood}/100, energy ${avgEnergy}/100, stress ${avgStress}/100${topFactor ? `. Most common factor: ${topFactor}.` : "."}`
+}, [moods])
 
   if (loading) return <div className="container section"><p>Loading dashboard...</p></div>
 
@@ -192,10 +224,13 @@ export function DashboardCharts() {
           ))}
         </div>
         <div className="form-card">
-          <span className="kicker">AI assessment</span>
+          <span className="kicker">AI assessment
+          <p>{behaviorTrend}</p>
+          </span>
           <h3>{latestScores.ai_assessment}</h3>
           <p>Latest actual mood: {latestMood?.mood_score ?? latest.mood_score ?? "not captured"}/10. Latest actual energy: {latestMood?.energy_score ?? latest.energy_score ?? "not captured"}/10.</p>
-          <p>Forecast learning: {summary.feedbackCount ? `${summary.feedbackCount} feedback day(s), average correction ${summary.forecastAdjustment >= 0 ? "+" : ""}${summary.forecastAdjustment} points.` : "Add mood logs after daily entries to personalize the energy forecast."}</p>
+          <p> Energy learning: {summary.feedbackCount ? `Across ${summary.feedbackCount} saved day(s), actual energy has been ${summary.forecastAdjustment >= 0 ? "higher" : "lower"} than predicted by ${Math.abs(summary.forecastAdjustment)} points on average. Future predictions are adjusted using this gap.`
+  : "Save mood actual energy after daily entry to compare predicted and actual energy."}</p>
           <p className="small">This is a wellbeing reflection tool, not a medical diagnosis. The word “quantum” is used as a metaphor for multi-state thinking, disciplined attention and error correction in the mind.</p>
         </div>
       </section>
