@@ -26,27 +26,63 @@ function groupWindow(entries: DailyEntry[], days: number) {
   return entries.filter(e => e.entry_date >= start)
 }
 
-function MiniLine({ entries }: { entries: DailyEntry[] }) {
-  const data = entries.slice(-30).map((e, idx) => ({
-    x: idx,
-    actual: Number(e.energy_score ?? 0) * 10,
-    predicted: Number(e.predicted_next_day_energy ?? calculateScores(e).predicted_next_day_energy ?? 0)
-  }))
+function function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[] }) {
+  const moodByDate = new Map(moods.map(m => [m.entry_date, m]))
+
+  const data = entries.slice(-14).map(e => {
+    const mood = moodByDate.get(e.entry_date)
+    return {
+      date: e.entry_date.slice(5),
+      predicted: Number(e.predicted_next_day_energy ?? calculateScores(e).predicted_next_day_energy ?? 0),
+      actual: Number(mood?.energy_score ?? e.energy_score ?? 0) * 10
+    }
+  })
+
+  if (!data.length) {
+    return (
+      <div className="chart-empty">
+        <p>Save daily entries to see predicted energy. Add mood logs to compare actual energy.</p>
+      </div>
+    )
+  }
+
   const width = 740
-  const height = 240
-  const path = (key: "actual" | "predicted") => data.map((d, i) => {
-    const x = data.length <= 1 ? 0 : (d.x / (data.length - 1)) * (width - 36) + 18
-    const y = height - 20 - (d[key] / 100) * (height - 40)
-    return `${i === 0 ? "M" : "L"}${x},${y}`
-  }).join(" ")
-  if (!data.length) return <p>No chart data yet. Save daily entries to view trends.</p>
+  const height = 280
+  const chartTop = 44
+  const chartBottom = 42
+  const chartHeight = height - chartTop - chartBottom
+  const groupWidth = (width - 64) / data.length
+  const barWidth = Math.max(10, Math.min(24, groupWidth * 0.28))
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Predicted and actual energy trend">
-      {[0,25,50,75,100].map(v => <g key={v}><line x1="18" x2={width-18} y1={height-20-(v/100)*(height-40)} y2={height-20-(v/100)*(height-40)} stroke="rgba(255,255,255,.12)"/><text x="20" y={height-24-(v/100)*(height-40)} fill="#aebcd0" fontSize="12">{v}</text></g>)}
-      <path d={path("predicted")} fill="none" stroke="#F3C768" strokeWidth="4" strokeLinecap="round"/>
-      <path d={path("actual")} fill="none" stroke="#69E7FF" strokeWidth="4" strokeLinecap="round"/>
-      <text x="20" y="24" fill="#F3C768" fontSize="14">Predicted energy</text>
+    <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Predicted and actual energy bar chart">
+      {[0, 25, 50, 75, 100].map(v => {
+        const y = chartTop + chartHeight - (v / 100) * chartHeight
+        return (
+          <g key={v}>
+            <line x1="42" x2={width - 22} y1={y} y2={y} stroke="rgba(255,255,255,.14)" />
+            <text x="10" y={y + 4} fill="#aebcd0" fontSize="12">{v}</text>
+          </g>
+        )
+      })}
+
+      <text x="42" y="24" fill="#F3C768" fontSize="14">Predicted energy</text>
       <text x="190" y="24" fill="#69E7FF" fontSize="14">Actual energy</text>
+
+      {data.map((d, i) => {
+        const x = 48 + i * groupWidth
+        const predictedHeight = (Math.max(0, Math.min(100, d.predicted)) / 100) * chartHeight
+        const actualHeight = (Math.max(0, Math.min(100, d.actual)) / 100) * chartHeight
+        const baseY = chartTop + chartHeight
+
+        return (
+          <g key={`${d.date}-${i}`}>
+            <rect x={x} y={baseY - predictedHeight} width={barWidth} height={predictedHeight} rx="4" fill="#F3C768" />
+            <rect x={x + barWidth + 4} y={baseY - actualHeight} width={barWidth} height={actualHeight} rx="4" fill="#69E7FF" opacity={d.actual ? 1 : .18} />
+            <text x={x - 2} y={height - 14} fill="#aebcd0" fontSize="10">{d.date}</text>
+          </g>
+        )
+      })}
     </svg>
   )
 }
@@ -153,7 +189,7 @@ export function DashboardCharts() {
 
       <section className="form-card" style={{ marginTop: 16 }}>
         <span className="kicker">Predicted vs actual energy</span>
-        <MiniLine entries={entries} />
+<MiniBars entries={entries} moods={moods} />
       </section>
     </div>
   )
