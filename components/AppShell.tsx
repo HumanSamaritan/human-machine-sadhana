@@ -36,11 +36,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span>Human + Machine Sadhana</span>
           </Link>
           <nav className="nav-links">
+            <Link href="/" className="icon-nav" title="Home" aria-label="Home">⌂</Link>
             <Link href="/entry">Daily Entry</Link>
             <Link href="/mood">Mood</Link>
             <Link href="/gratitude">Gratitude</Link>
             <Link href="/dashboard">Dashboard</Link>
-            <Link href="/settings">Settings</Link>
+            <Link href="/settings" className="icon-nav" title="Settings" aria-label="Settings">⚙</Link>   
             <Link href="/method">Method</Link>
             {user ? <button className="ghost-btn" onClick={signOut}>Sign out</button> : <Link href="/">Login</Link>}
           </nav>
