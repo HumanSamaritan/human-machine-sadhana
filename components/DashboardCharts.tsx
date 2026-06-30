@@ -66,11 +66,15 @@ function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[
         )
       })}
 
-      <text x="42" y="24" fill="#F3C768" fontSize="14">Predicted energy</text>
-      <text x="190" y="24" fill="#69E7FF" fontSize="14">Actual energy</text>
+      <g transform={`translate(${width - 260}, 24)`}>
+      <rect x="0" y="-12" width="14" height="14" rx="3" fill="#F3C768" />
+      <text x="22" y="0" fill="#eaf0f7" fontSize="13">Predicted</text>
+      <rect x="120" y="-12" width="14" height="14" rx="3" fill="#69E7FF" />
+      <text x="142" y="0" fill="#eaf0f7" fontSize="13">Actual</text>
+      </g>
 
       {data.map((d, i) => {
-      const groupX = data.length === 1 ? 72 : 52 + i * groupWidth
+      const groupX = data.length === 1 ? width / 2 - barWidth - 8 : 52 + i * groupWidth
       const predictedX = groupX
       const actualX = groupX + barWidth + 8        
         const predictedHeight = (Math.max(0, Math.min(100, d.predicted)) / 100) * chartHeight
