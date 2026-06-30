@@ -49,6 +49,50 @@ export function DailyEntryForm() {
   const [userId, setUserId] = useState<string | null>(null)
 
   const scores = useMemo(() => calculateScores(entry), [entry])
+  const dailyGuidance = useMemo(() => {
+  const sleepHours = Number(entry.sleep_hours ?? 0)
+  const sleepQuality = Number(entry.sleep_quality ?? 0)
+  const movement = Number(entry.physical_vitality_min ?? 0)
+  const mood = Number(entry.mood_score ?? 0)
+  const meals = entry.meals_captured
+  const water = Number(entry.water_litres ?? 0)
+  const work = Number(entry.revenue_money_work_min ?? 0)
+
+  if (sleepHours >= 9) {
+    return "You logged high sleep. Notice whether this reflects deep recovery or tiredness. Keep movement light and observe your actual energy today."
+  }
+
+  if (sleepHours > 0 && sleepHours < 6) {
+    return "Sleep is low today. Keep work focused, reduce overload, and protect sleep preparation tonight."
+  }
+
+  if (sleepQuality > 0 && sleepQuality <= 2) {
+    return "Sleep quality is weak. Consider a calmer evening routine, less screen time, and a shorter recovery walk."
+  }
+
+  if (movement < 15) {
+    return "Movement is low. A short walk, stretching, yoga or breathing practice can improve energy quickly."
+  }
+
+  if (meals !== "Complete") {
+    return "Food data is incomplete. Capture breakfast, lunch and dinner so energy prediction becomes more useful."
+  }
+
+  if (water > 0 && water < 1.5) {
+    return "Water intake looks low. Hydration may affect mood, focus and energy."
+  }
+
+  if (mood > 0 && mood <= 4) {
+    return "Mood is low. Add gratitude, family connection or quiet reflection before closing the day."
+  }
+
+  if (work > 540) {
+    return "Workload is very high. Balance it with sleep preparation and recovery so performance remains sustainable."
+  }
+
+  return "Your daily rhythm looks balanced so far. Save the entry and compare tomorrow's actual energy with the prediction."
+}, [entry])
+
   const nudges = useMemo(() => intelligentNudges(entry), [entry])
 
   useEffect(() => {
@@ -119,8 +163,8 @@ export function DailyEntryForm() {
           <p>Use simple dropdowns and sliders. The app calculates wellbeing, happiness quotient, performance, quantum-mind readiness and predicted next-day energy.</p>
         </section>
         <section className="notice">
-          <strong>Intelligent UI logic</strong>
-          <p>Low sleep, missing meals, low movement or low mood triggers guidance. The goal is gentle correction, not guilt.</p>
+          <strong>Daily guidance</strong>
+          <p>{dailyGuidance}</p>
         </section>
       </div>
 
@@ -183,7 +227,7 @@ export function DailyEntryForm() {
         <div className="metric-card"><span>Next-Day Energy</span><strong>{scores.predicted_next_day_energy}</strong><p className="small">Prediction improves with sleep + food data</p></div>
         <div className="metric-card"><span>Quantum Mind Readiness</span><strong>{scores.quantum_mind_score}</strong><p className="small">Metaphor: disciplined mind + AI partnership</p></div>
       </section>
-
+  
       {nudges.length ? <section className="notice" style={{ marginTop: 16 }}><strong>Suggested corrections</strong>{nudges.map(n => <p key={n}>• {n}</p>)}</section> : null}
 
       <div className="cta-row">
