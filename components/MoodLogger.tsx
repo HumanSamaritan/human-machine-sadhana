@@ -17,6 +17,33 @@ export function MoodLogger() {
   const [note, setNote] = useState("")
   const [status, setStatus] = useState("")
 
+  async function loadMood(uid: string, date: string, timing = moodTime) {
+  const supabase = createBrowserSupabaseClient()
+  const { data } = await supabase
+    .from("mood_entries")
+    .select("*")
+    .eq("user_id", uid)
+    .eq("entry_date", date)
+    .eq("mood_time", timing)
+    .maybeSingle()
+
+  if (data) {
+    setMoodScore(data.mood_score ?? 0)
+    setEnergyScore(data.energy_score ?? 0)
+    setStressScore(data.stress_score ?? 0)
+    setFactors(data.factors ?? [])
+    setNote(data.note ?? "")
+    setStatus("Saved mood loaded for this date.")
+  } else {
+    setMoodScore(0)
+    setEnergyScore(0)
+    setStressScore(0)
+    setFactors([])
+    setNote("")
+    setStatus("")
+  }
+}
+
   const valence = useMemo(() => {
     if (moodScore <= 2) return feelingLabels[0]
     if (moodScore <= 4) return feelingLabels[1]
@@ -28,12 +55,20 @@ export function MoodLogger() {
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) window.location.href = "/"
-      else setUserId(data.user.id)
-    })
-  }, [])
+    supabase.auth.getUser().then(({ data }) => {const uid = data.user?.id ?? ""
+    setUserId(uid)
 
+    if (uid) {
+      loadMood(uid, entryDate, moodTime)
+    }
+  })
+}, [])
+      useEffect(() => {
+  if (userId) {
+    loadMood(userId, entryDate, moodTime)
+  }
+}, [userId, entryDate, moodTime])
+  
   function toggleFactor(factor: string) {
     setFactors(prev => prev.includes(factor) ? prev.filter(f => f !== factor) : [...prev, factor])
   }
