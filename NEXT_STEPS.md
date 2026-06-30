@@ -31,7 +31,7 @@
 2. Verify your sender domain.
 3. Add `RESEND_API_KEY` and `REMINDER_FROM_EMAIL` in Vercel.
 4. Add `CRON_SECRET` in Vercel.
-5. Either use Vercel Pro cron or use an external scheduler to call `/api/reminders` hourly.
+5. Use an external scheduler to call `/api/reminders` once per day.
 6. Scheduler header: `Authorization: Bearer YOUR_CRON_SECRET`.
 
 ## Phase 4 — Pilot with 1,000 users

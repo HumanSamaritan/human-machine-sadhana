@@ -10,7 +10,7 @@ It converts the Excel tracker into a simple web app with:
 - Encrypted gratitude page
 - Dashboard with wellbeing, happiness quotient, predicted next-day energy, performance and Quantum Mind Readiness
 - Prediction feedback that compares forecasted energy with actual mood/energy logs and personalizes future dashboard forecasts
-- Email reminders 3 times per day through Resend and a cron caller
+- One daily email reminder through Resend and an external daily scheduler
 - Supabase database with row-level security
 
 ## Recommended stack
@@ -50,7 +50,7 @@ https://your-vercel-domain.vercel.app/dashboard
 ```
 
 8. Copy Supabase URL and anon key into `.env.local`.
-9. Copy service role key into `.env.local` for reminder cron only. Do not expose it on the client.
+9. Copy service role key into `.env.local` for the reminder route only. Do not expose it on the client.
 
 ## Vercel setup
 
@@ -80,14 +80,14 @@ Root Directory: leave blank
 
 The app includes `app/api/reminders/route.ts`.
 
-It checks reminder preferences and sends email when current local hour matches the user's morning, afternoon or evening reminder time.
-It also records each sent morning, afternoon and evening slot in `reminder_sends`, so an hourly cron caller does not repeatedly send the same reminder within a slot.
+It checks reminder preferences and sends one email when current local hour matches the user's daily reminder time.
+It also records each sent date in `reminder_sends`, so repeat calls do not send more than one reminder per day.
 
-For 3 daily reminders:
+For one daily reminder:
 
-- Best production option: Vercel Pro cron or an external cron service hitting `/api/reminders` hourly.
+- Use a free/low-cost external scheduler hitting `/api/reminders` once per day near the user's preferred reminder time.
 - Header required: `Authorization: Bearer YOUR_CRON_SECRET`.
-- For Vercel Hobby, native cron may be limited. Use an external scheduler if you need three reminders daily without upgrading.
+- The package no longer includes a Vercel cron definition.
 
 ## Data pages
 

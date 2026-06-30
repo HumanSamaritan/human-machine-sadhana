@@ -33,4 +33,4 @@ Goal: prepare a production-ready Vercel deployment with Supabase Auth, Supabase 
 - Vercel for app hosting.
 - Supabase for Auth + Postgres + RLS.
 - Resend for emails.
-- External cron or Vercel Pro cron for three reminders daily.
+- External daily scheduler for one reminder per day.

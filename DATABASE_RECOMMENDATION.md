@@ -23,5 +23,5 @@ Google Sheets is simple and familiar, but for this app it has limitations:
 ## Cost path
 
 - Start: Supabase Free + Vercel Hobby + Resend free/test where possible.
-- For 3 reminders/day: use external free cron or Vercel Pro.
+- For 1 reminder/day: use an external free scheduler or trigger the reminder route manually.
 - For production and reliability: Supabase Pro + Vercel Pro.
