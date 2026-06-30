@@ -16,8 +16,7 @@ export function AuthPanel() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo,
-          queryParams: { access_type: "offline", prompt: "consent" }
+          redirectTo
         }
       })
       if (error) setError(error.message)
