@@ -1,0 +1,160 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { createBrowserSupabaseClient } from "@/lib/supabase/client"
+import { calculateScores, zone } from "@/lib/scoring"
+import { MetricCard } from "./MetricCard"
+import type { DailyEntry } from "@/lib/constants"
+
+type MoodEntry = { entry_date: string; mood_score: number | null; energy_score: number | null; stress_score: number | null }
+type GratitudeEntry = { entry_date: string; item_count: number }
+type PredictionFeedback = { entry_date: string; predicted_energy: number | null; actual_energy: number | null; prediction_delta: number | null }
+
+function avg(values: number[]) {
+  const v = values.filter(x => Number.isFinite(x))
+  return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0
+}
+
+function dateKey(daysAgo: number) {
+  const d = new Date()
+  d.setDate(d.getDate() - daysAgo)
+  return d.toISOString().slice(0, 10)
+}
+
+function groupWindow(entries: DailyEntry[], days: number) {
+  const start = dateKey(days)
+  return entries.filter(e => e.entry_date >= start)
+}
+
+function MiniLine({ entries }: { entries: DailyEntry[] }) {
+  const data = entries.slice(-30).map((e, idx) => ({
+    x: idx,
+    actual: Number(e.energy_score ?? 0) * 10,
+    predicted: Number(e.predicted_next_day_energy ?? calculateScores(e).predicted_next_day_energy ?? 0)
+  }))
+  const width = 740
+  const height = 240
+  const path = (key: "actual" | "predicted") => data.map((d, i) => {
+    const x = data.length <= 1 ? 0 : (d.x / (data.length - 1)) * (width - 36) + 18
+    const y = height - 20 - (d[key] / 100) * (height - 40)
+    return `${i === 0 ? "M" : "L"}${x},${y}`
+  }).join(" ")
+  if (!data.length) return <p>No chart data yet. Save daily entries to view trends.</p>
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="chart" role="img" aria-label="Predicted and actual energy trend">
+      {[0,25,50,75,100].map(v => <g key={v}><line x1="18" x2={width-18} y1={height-20-(v/100)*(height-40)} y2={height-20-(v/100)*(height-40)} stroke="rgba(255,255,255,.12)"/><text x="20" y={height-24-(v/100)*(height-40)} fill="#aebcd0" fontSize="12">{v}</text></g>)}
+      <path d={path("predicted")} fill="none" stroke="#F3C768" strokeWidth="4" strokeLinecap="round"/>
+      <path d={path("actual")} fill="none" stroke="#69E7FF" strokeWidth="4" strokeLinecap="round"/>
+      <text x="20" y="24" fill="#F3C768" fontSize="14">Predicted energy</text>
+      <text x="190" y="24" fill="#69E7FF" fontSize="14">Actual energy</text>
+    </svg>
+  )
+}
+
+export function DashboardCharts() {
+  const [entries, setEntries] = useState<DailyEntry[]>([])
+  const [moods, setMoods] = useState<MoodEntry[]>([])
+  const [gratitude, setGratitude] = useState<GratitudeEntry[]>([])
+  const [feedback, setFeedback] = useState<PredictionFeedback[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient()
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { window.location.href = "/"; return }
+      const [daily, mood, grat, prediction] = await Promise.all([
+        supabase.from("daily_entries").select("*").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
+        supabase.from("mood_entries").select("entry_date,mood_score,energy_score,stress_score").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
+        supabase.from("gratitude_entries").select("entry_date,item_count").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120),
+        supabase.from("prediction_feedback").select("entry_date,predicted_energy,actual_energy,prediction_delta").eq("user_id", data.user.id).order("entry_date", { ascending: true }).limit(120)
+      ])
+      setEntries((daily.data ?? []) as DailyEntry[])
+      setMoods((mood.data ?? []) as MoodEntry[])
+      setGratitude((grat.data ?? []) as GratitudeEntry[])
+      setFeedback((prediction.data ?? []) as PredictionFeedback[])
+      setLoading(false)
+    })
+  }, [])
+
+  const latest = entries[entries.length - 1]
+  const latestScores = latest ? calculateScores(latest) : null
+  const weekly = groupWindow(entries, 7)
+  const monthly = groupWindow(entries, 30)
+  const latestMood = moods[moods.length - 1]
+
+  const summary = useMemo(() => {
+    const score = (e: DailyEntry) => e.wellbeing_score ?? calculateScores(e).wellbeing_score
+    const energy = (e: DailyEntry) => e.predicted_next_day_energy ?? calculateScores(e).predicted_next_day_energy
+    const recentFeedback = feedback.filter(f => f.entry_date >= dateKey(30) && Number.isFinite(Number(f.prediction_delta)))
+    const forecastAdjustment = recentFeedback.length ? avg(recentFeedback.map(f => Number(f.prediction_delta))) : 0
+    const rawNextEnergy = latestScores?.predicted_next_day_energy ?? 0
+    return {
+      weeklyWellbeing: avg(weekly.map(e => Number(score(e)))),
+      monthlyWellbeing: avg(monthly.map(e => Number(score(e)))),
+      weeklyEnergy: avg(weekly.map(e => Number(energy(e)))),
+      monthlyEnergy: avg(monthly.map(e => Number(energy(e)))),
+      gratitudeCount: gratitude.filter(g => g.entry_date >= dateKey(30)).reduce((a, b) => a + Number(b.item_count ?? 0), 0),
+      feedbackCount: recentFeedback.length,
+      forecastAdjustment,
+      personalizedNextEnergy: Math.max(0, Math.min(100, rawNextEnergy + forecastAdjustment))
+    }
+  }, [weekly, monthly, gratitude, feedback, latestScores])
+
+  if (loading) return <div className="container section"><p>Loading dashboard...</p></div>
+
+  if (!latest || !latestScores) {
+    return (
+      <div className="container section">
+        <h2>Your dashboard is ready</h2>
+        <p>Save your first daily entry to generate charts.</p>
+        <a className="primary-btn" href="/entry">Create first entry</a>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container section">
+      <span className="kicker">Outcome Dashboard</span>
+      <h2>Wellbeing, happiness quotient and energy forecast</h2>
+      <p>Daily, weekly and monthly views compare predicted energy with actual feeling. The model can be tuned as more data is collected.</p>
+
+      <section className="grid grid-4">
+        <MetricCard label="Today Wellbeing" value={latestScores.wellbeing_score} sub={zone(latestScores.wellbeing_score)} />
+        <MetricCard label="Happiness Quotient" value={latestScores.happiness_quotient} sub="Mood + joy + family + purpose" />
+        <MetricCard label="Next-Day Energy" value={summary.personalizedNextEnergy} sub={summary.feedbackCount ? `Personalized by ${summary.forecastAdjustment >= 0 ? "+" : ""}${summary.forecastAdjustment} pts` : "Prediction for tomorrow"} />
+        <MetricCard label="Quantum Mind Readiness" value={latestScores.quantum_mind_score} sub="Disciplined mind + AI partnership" />
+      </section>
+
+      <section className="grid grid-3" style={{ marginTop: 16 }}>
+        <MetricCard label="Weekly Wellbeing" value={summary.weeklyWellbeing} sub={`${weekly.length} day(s) captured`} />
+        <MetricCard label="Monthly Wellbeing" value={summary.monthlyWellbeing} sub={`${monthly.length} day(s) captured`} />
+        <MetricCard label="Gratitude Items" value={summary.gratitudeCount} sub="Last 30 days, private content hidden" />
+      </section>
+
+      <section className="grid grid-2" style={{ marginTop: 16 }}>
+        <div className="form-card">
+          <span className="kicker">Dimension chart</span>
+          {Object.entries(latestScores.dimensions).map(([label, score]) => (
+            <div className="bar-row" key={label}>
+              <span className="small">{label}</span>
+              <div className="progress"><div style={{ width: `${Math.max(0, Math.min(100, score))}%` }} /></div>
+              <strong>{Math.round(score)}</strong>
+            </div>
+          ))}
+        </div>
+        <div className="form-card">
+          <span className="kicker">AI assessment</span>
+          <h3>{latestScores.ai_assessment}</h3>
+          <p>Latest actual mood: {latestMood?.mood_score ?? latest.mood_score ?? "not captured"}/10. Latest actual energy: {latestMood?.energy_score ?? latest.energy_score ?? "not captured"}/10.</p>
+          <p>Forecast learning: {summary.feedbackCount ? `${summary.feedbackCount} feedback day(s), average correction ${summary.forecastAdjustment >= 0 ? "+" : ""}${summary.forecastAdjustment} points.` : "Add mood logs after daily entries to personalize the energy forecast."}</p>
+          <p className="small">This is a wellbeing reflection tool, not a medical diagnosis. The word “quantum” is used as a metaphor for multi-state thinking, disciplined attention and error correction in the mind.</p>
+        </div>
+      </section>
+
+      <section className="form-card" style={{ marginTop: 16 }}>
+        <span className="kicker">Predicted vs actual energy</span>
+        <MiniLine entries={entries} />
+      </section>
+    </div>
+  )
+}
