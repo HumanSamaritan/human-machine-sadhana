@@ -46,10 +46,10 @@ export function MoodLogger() {
       user_id: userId,
       entry_date: entryDate,
       mood_time: moodTime,
-      mood_score: moodScore,
-      energy_score: energyScore,
-      stress_score: stressScore,
-      valence_label: valence,
+      mood_score: moodScore || null,
+      energy_score: energyScore || null,
+      stress_score: stressScore || null,
+      valence_label: moodScore ? valence : null,
       factors,
       note,
       updated_at: new Date().toISOString()
@@ -68,7 +68,7 @@ export function MoodLogger() {
       .maybeSingle()
 
     const predicted = Number(dailyEntry?.predicted_next_day_energy ?? 0)
-    if (predicted > 0) {
+    if (predicted > 0 && energyScore > 0) {
       await supabase.from("prediction_feedback").upsert({
         user_id: userId,
         entry_date: entryDate,
