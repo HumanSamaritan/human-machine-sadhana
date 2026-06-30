@@ -10,7 +10,6 @@ const sources = [
 
 export default function MethodPage() {
   return (
-    <AppShell>
       <main className="container section">
         <span className="kicker">Scoring method</span>
         <h2>The Human + Machine Sadhana model</h2>
@@ -39,6 +38,5 @@ export default function MethodPage() {
           <p>The app treats this as a metaphor. Human cognition is not literally turned into quantum computing. The useful idea is error correction: identify mental noise, bias, distraction and fatigue, then improve attention, reflection, learning, ethics and partnership with machines.</p>
         </section>
       </main>
-    </AppShell>
-  )
+      )
 }
