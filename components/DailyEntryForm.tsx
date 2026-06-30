@@ -73,9 +73,7 @@ export function DailyEntryForm() {
       email,
       timezone: "Asia/Singapore",
       enabled: true,
-      morning_time: "08:00",
-      afternoon_time: "14:00",
-      evening_time: "20:30"
+      morning_time: "08:00"
     }, { onConflict: "user_id" })
   }
 

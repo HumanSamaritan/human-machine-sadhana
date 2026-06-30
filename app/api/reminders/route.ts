@@ -24,13 +24,8 @@ function sameHour(now: string, target: string) {
   return now.slice(0, 2) === target.slice(0, 2)
 }
 
-function dueSlot(now: string, pref: any) {
-  const slots = [
-    ["morning", pref.morning_time],
-    ["afternoon", pref.afternoon_time],
-    ["evening", pref.evening_time]
-  ] as const
-  return slots.find(([, target]) => target && sameHour(now, target))?.[0] ?? null
+function isDailyReminderDue(now: string, pref: any) {
+  return sameHour(now, pref.morning_time || "08:00")
 }
 
 function reminderHtml(link: string) {
@@ -70,13 +65,13 @@ export async function GET(req: NextRequest) {
   for (const pref of prefs ?? []) {
     if (!pref.email) continue
     const now = localHHMM(pref.timezone)
-    const slot = isTest ? "test" : dueSlot(now, pref)
-    if (!slot) continue
+    const due = isTest || isDailyReminderDue(now, pref)
+    if (!due) continue
     if (!isTest) {
       const { error: lockError } = await supabase.from("reminder_sends").insert({
         user_id: pref.user_id,
         local_date: localDate(pref.timezone),
-        reminder_slot: slot,
+        reminder_slot: "morning",
         email: pref.email
       })
       if (lockError) {
@@ -94,5 +89,5 @@ export async function GET(req: NextRequest) {
     sent++
   }
 
-  return NextResponse.json({ message: `Reminder run completed. Emails sent: ${sent}. Duplicate slots skipped: ${skipped}` })
+  return NextResponse.json({ message: `Daily reminder run completed. Emails sent: ${sent}. Already-sent days skipped: ${skipped}` })
 }
