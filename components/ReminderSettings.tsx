@@ -84,10 +84,6 @@ export function ReminderSettings() {
         </div>
         {status ? <p className="success">{status}</p> : null}
       </div>
-      <div className="notice" style={{ marginTop: 16 }}>
-        <strong>Important scheduler note</strong>
-        <p>The Vercel cron job has been removed. To send this reminder automatically, use a daily external scheduler calling <code>/api/reminders</code> with the CRON_SECRET header.</p>
       </div>
-    </div>
   )
 }
