@@ -768,3 +768,45 @@ input[type="range"] { padding:0; accent-color: var(--gold); }
     padding: 8px 10px;
   }
 }
+.hero-caption {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.hero-caption .hero-caption-inner,
+.hero-caption > div {
+  display: grid;
+  gap: 10px;
+}
+
+.hero-caption h2,
+.hero-caption h3 {
+  margin: 0;
+  line-height: 1.05;
+}
+
+.hero-caption p {
+  margin: 0;
+  max-width: 34rem;
+}
+
+.hero-caption .primary-btn,
+.hero-caption .ghost-btn {
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.card .icon {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 14px;
+  color: var(--gold);
+  font-size: 1.55rem;
+  line-height: 34px;
+}
+
+.card h3 {
+  line-height: 1.2;
+}
