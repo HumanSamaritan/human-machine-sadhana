@@ -70,7 +70,7 @@ export function ReminderSettings() {
     <div className="container section">
       <span className="kicker">Reminder settings</span>
       <h2>One daily email prompt</h2>
-      <p>Reminders are sent to the user's Gmail/email account once per day.</p>
+      <p>Reminders are sent to the user's Gmail/email account once per day. Use Supabase + Resend and a daily scheduler if you want the reminder to run automatically.</p>
       <div className="form-card">
         <div className="grid grid-3">
           <div className="field"><label>Email</label><input value={settings.email} onChange={e => set("email", e.target.value)} /></div>
@@ -84,6 +84,10 @@ export function ReminderSettings() {
         </div>
         {status ? <p className="success">{status}</p> : null}
       </div>
+      <div className="notice" style={{ marginTop: 16 }}>
+        <strong>Important scheduler note</strong>
+        <p>The Vercel cron job has been removed. To send this reminder automatically, use a daily external scheduler calling <code>/api/reminders</code> with the CRON_SECRET header.</p>
       </div>
+    </div>
   )
 }

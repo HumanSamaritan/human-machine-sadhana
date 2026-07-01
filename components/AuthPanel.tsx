@@ -1,63 +1,46 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { createBrowserSupabaseClient } from "@/lib/supabase/client"
 
 export function AuthPanel() {
   const [loading, setLoading] = useState(false)
-  const [signedIn, setSignedIn] = useState(false)
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    const supabase = createBrowserSupabaseClient()
-    supabase.auth.getSession().then(({ data }) => {
-      setSignedIn(Boolean(data.session))
-    })
-  }, [])
 
   async function login() {
     setLoading(true)
     setError("")
-
     try {
       const supabase = createBrowserSupabaseClient()
+      const redirectTo = `${window.location.origin}/dashboard`
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo,
+          queryParams: { access_type: "offline", prompt: "consent" }
         }
       })
-
-      if (error) {
-        setError(error.message)
-        setLoading(false)
-      }
+      if (error) setError(error.message)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed")
       setLoading(false)
     }
   }
 
-  if (signedIn) {
-    return (
-      <div className="form-card">
-        <span className="kicker">Welcome back</span>
-        <h2>Continue your daily ritual</h2>
-        <p>Your Human + Machine Sadhana space is ready.</p>
-        <a className="primary-btn" href="/dashboard">Open Dashboard</a>
-      </div>
-    )
-  }
-
   return (
     <div className="form-card">
-      <span className="kicker">Private daily practice</span>
-      <h2>Begin with Google</h2>
-      <p>Sign in once to save your daily wellbeing, mood, gratitude and energy reflections.</p>
+      <span className="kicker">Google login</span>
+      <h2>Start your daily ritual</h2>
+      <p>
+        Sign in with Google to keep your daily Human + Machine Sadhana entries private under your own account.
+      </p>
       <button className="primary-btn" onClick={login} disabled={loading}>
-        {loading ? "Opening Google..." : "Sign in with Google"}
+        {loading ? "Opening Google..." : "Continue with Google"}
       </button>
       {error ? <p className="warning">{error}</p> : null}
+      <p className="small">
+        First launch uses Supabase Google OAuth. Enable Google provider in Supabase before production deployment.
+      </p>
     </div>
   )
 }
