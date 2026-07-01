@@ -11,7 +11,6 @@ export default function HomePage() {
             A simple wellbeing and performance ritual for humans living in an ecosystem shaped by machines, AI and technology. Track physical vitality, inner practice, livelihood work, learning, AI partnership, family, seva, food, mood, gratitude and sleep.
           </p>
           <div className="cta-row">
-            <a className="primary-btn" href="#login">Login with Google</a>
             <a className="ghost-btn" href="/demo">Watch demo</a>
             <a className="ghost-btn" href="/method">Method</a>
           </div>
