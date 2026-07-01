@@ -16,9 +16,9 @@ export default function HomePage() {
             <a className="ghost-btn" href="/method">Method</a>
           </div>
           <div className="section grid grid-3">
-            <div className="card"><span className="icon">ðŸ§˜</span><h3>Inner operating system</h3><p>Prayer, meditation and healing help reduce mental noise and improve direction of mind.</p></div>
-            <div className="card"><span className="icon">âš™ï¸</span><h3>Human-machine partnership</h3><p>AI becomes a co-worker, not a replacement for human purpose, care and judgment.</p></div>
-            <div className="card"><span className="icon">ðŸŒ±</span><h3>Planetary sustainability</h3><p>Daily seva and sustainability acts keep personal growth connected to collective progress.</p></div>
+            <span className="icon" aria-hidden="true">●</span>
+<span className="icon" aria-hidden="true">✦</span>
+<span className="icon" aria-hidden="true">◆</span>
           </div>
         </section>
         <section className="hero-card" id="login">
