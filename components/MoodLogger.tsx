@@ -9,13 +9,40 @@ const today = () => new Date().toISOString().slice(0, 10)
 export function MoodLogger() {
   const [userId, setUserId] = useState<string | null>(null)
   const [entryDate, setEntryDate] = useState(today())
-  const [moodScore, setMoodScore] = useState(6)
-  const [energyScore, setEnergyScore] = useState(6)
-  const [stressScore, setStressScore] = useState(4)
+  const [moodScore, setMoodScore] = useState(0)
+  const [energyScore, setEnergyScore] = useState(0)
+  const [stressScore, setStressScore] = useState(0)
   const [moodTime, setMoodTime] = useState("end_of_day")
-  const [factors, setFactors] = useState<string[]>(["Work"])
+  const [factors, setFactors] = useState<string[]>([])
   const [note, setNote] = useState("")
   const [status, setStatus] = useState("")
+
+  async function loadMood(uid: string, date: string, timing = moodTime) {
+  const supabase = createBrowserSupabaseClient()
+  const { data } = await supabase
+    .from("mood_entries")
+    .select("*")
+    .eq("user_id", uid)
+    .eq("entry_date", date)
+    .eq("mood_time", timing)
+    .maybeSingle()
+
+  if (data) {
+    setMoodScore(data.mood_score ?? 0)
+    setEnergyScore(data.energy_score ?? 0)
+    setStressScore(data.stress_score ?? 0)
+    setFactors(data.factors ?? [])
+    setNote(data.note ?? "")
+    setStatus("Saved mood loaded for this date.")
+  } else {
+    setMoodScore(0)
+    setEnergyScore(0)
+    setStressScore(0)
+    setFactors([])
+    setNote("")
+    setStatus("")
+  }
+}
 
   const valence = useMemo(() => {
     if (moodScore <= 2) return feelingLabels[0]
@@ -28,12 +55,20 @@ export function MoodLogger() {
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) window.location.href = "/"
-      else setUserId(data.user.id)
-    })
-  }, [])
+    supabase.auth.getUser().then(({ data }) => {const uid = data.user?.id ?? ""
+    setUserId(uid)
 
+    if (uid) {
+      loadMood(uid, entryDate, moodTime)
+    }
+  })
+}, [])
+      useEffect(() => {
+  if (userId) {
+    loadMood(userId, entryDate, moodTime)
+  }
+}, [userId, entryDate, moodTime])
+  
   function toggleFactor(factor: string) {
     setFactors(prev => prev.includes(factor) ? prev.filter(f => f !== factor) : [...prev, factor])
   }
@@ -46,10 +81,10 @@ export function MoodLogger() {
       user_id: userId,
       entry_date: entryDate,
       mood_time: moodTime,
-      mood_score: moodScore,
-      energy_score: energyScore,
-      stress_score: stressScore,
-      valence_label: valence,
+      mood_score: moodScore || null,
+      energy_score: energyScore || null,
+      stress_score: stressScore || null,
+      valence_label: moodScore ? valence : null,
       factors,
       note,
       updated_at: new Date().toISOString()
@@ -68,7 +103,7 @@ export function MoodLogger() {
       .maybeSingle()
 
     const predicted = Number(dailyEntry?.predicted_next_day_energy ?? 0)
-    if (predicted > 0) {
+    if (predicted > 0 && energyScore > 0) {
       await supabase.from("prediction_feedback").upsert({
         user_id: userId,
         entry_date: entryDate,
@@ -96,17 +131,19 @@ export function MoodLogger() {
             <div className="field"><label>Timing</label><select value={moodTime} onChange={e => setMoodTime(e.target.value)}><option value="during_day">During the day</option><option value="end_of_day">End of day</option><option value="weekly_review">Weekly review</option></select></div>
           </div>
           <div className="field">
-            <label>Mood: {moodScore}/10 — {valence}</label>
-            <input type="range" min="1" max="10" value={moodScore} onChange={e => setMoodScore(Number(e.target.value))} />
+          <label>Mood: {moodScore ? `${moodScore}/10 — ${valence}` : "Not entered"}</label>
+          <input type="range" min="0" max="10" value={moodScore} onChange={e => setMoodScore(Number(e.target.value))} />
           </div>
-          <div className="field">
-            <label>Actual Energy: {energyScore}/10</label>
-            <input type="range" min="1" max="10" value={energyScore} onChange={e => setEnergyScore(Number(e.target.value))} />
-          </div>
-          <div className="field">
-            <label>Stress / Load: {stressScore}/10</label>
-            <input type="range" min="1" max="10" value={stressScore} onChange={e => setStressScore(Number(e.target.value))} />
-          </div>
+
+         <div className="field">
+         <label>Actual Energy: {energyScore ? `${energyScore}/10` : "Not entered"}</label>
+         <input type="range" min="0" max="10" value={energyScore} onChange={e => setEnergyScore(Number(e.target.value))} />
+         </div>
+
+         <div className="field">
+         <label>Stress / Load: {stressScore ? `${stressScore}/10` : "Not entered"}</label>
+         <input type="range" min="0" max="10" value={stressScore} onChange={e => setStressScore(Number(e.target.value))} />
+         </div>
           <div className="field"><label>Additional context</label><textarea value={note} onChange={e => setNote(e.target.value)} placeholder="What influenced the mood today?" /></div>
           <button className="primary-btn" onClick={save}>Save Mood</button>
           {status ? <p className="success">{status}</p> : null}
