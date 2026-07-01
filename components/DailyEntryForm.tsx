@@ -97,8 +97,7 @@ export function DailyEntryForm() {
 
   useEffect(() => {
 
-  useEffect(() => {
-    const supabase = createBrowserSupabaseClient()
+   const supabase = createBrowserSupabaseClient()
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) {
         window.location.href = "/"
