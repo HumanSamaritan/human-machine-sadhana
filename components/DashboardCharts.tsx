@@ -6,92 +6,18 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client"
 import { calculateScores, zone } from "@/lib/scoring"
 import { MetricCard } from "./MetricCard"
 import type { DailyEntry } from "@/lib/constants"
-
-type ReportRange = "day" | "week" | "month"
-
-type MoodEntry = {
-  entry_date: string
-  mood_score: number | null
-  energy_score: number | null
-  stress_score: number | null
-  factors?: string[] | null
-  note?: string | null
-}
-
-type GratitudeEntry = {
-  entry_date: string
-  item_count: number | null
-}
-
-type PredictionFeedback = {
-  entry_date: string
-  predicted_energy: number | null
-  actual_energy: number | null
-  prediction_delta: number | null
-}
-
-function toNumberOrNull(value: unknown): number | null {
-  if (value === null || value === undefined || value === "") return null
-  const n = Number(value)
-  return Number.isFinite(n) ? n : null
-}
-
-function firstNumber(...values: unknown[]): number | null {
-  for (const value of values) {
-    const n = toNumberOrNull(value)
-    if (n !== null) return n
-  }
-  return null
-}
-
-function scaleTo100(value: unknown): number | null {
-  const n = toNumberOrNull(value)
-  return n === null ? null : n * 10
-}
-
-function avg(values: Array<number | null | undefined>) {
-  const valid = values.filter((x): x is number => typeof x === "number" && Number.isFinite(x))
-  return valid.length ? Math.round(valid.reduce((a, b) => a + b, 0) / valid.length) : null
-}
-
-function clampScore(value: number) {
-  return Math.max(0, Math.min(100, value))
-}
-
-function formatSigned(value: number | null | undefined) {
-  const n = Number(value ?? 0)
-  return `${n >= 0 ? "+" : ""}${n}`
-}
-
-function formatTenScore(value: unknown) {
-  const n = toNumberOrNull(value)
-  return n === null ? "-" : `${n}/10`
-}
-
-/**
- * Uses the user's local browser date instead of UTC ISO date.
- * This avoids Singapore/local timezone date mismatch around midnight.
- */
-function dateKey(daysAgo: number) {
-  const d = new Date()
-  d.setDate(d.getDate() - daysAgo)
-
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, "0")
-  const day = String(d.getDate()).padStart(2, "0")
-
-  return `${year}-${month}-${day}`
-}
-
-function groupWindow(entries: DailyEntry[], days: number) {
-  const start = dateKey(days)
-  return entries.filter(e => e.entry_date >= start)
-}
-
-function rangeEntries(entries: DailyEntry[], range: ReportRange) {
-  if (range === "day") return entries.slice(-1)
-  return groupWindow(entries, range === "week" ? 7 : 30)
-}
+import {
+  calculateScientificDashboardMetrics,
+  clampScore,
+  firstNumber,
+  formatScore,
+  formatTenScore,
+  ReportRange,
+  MoodEntry,
+  GratitudeEntry,
+  PredictionFeedback,
+  toNumberOrNull
+} from "@/lib/scoring"
 
 function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[] }) {
   const moodByDate = new Map(moods.map(m => [m.entry_date, m]))
@@ -149,6 +75,7 @@ function MiniBars({ entries, moods }: { entries: DailyEntry[]; moods: MoodEntry[
 
       {[0, 25, 50, 75, 100].map(v => {
         const y = plotBottom - (v / 100) * plotHeight
+
         return (
           <g key={v}>
             <line x1={plotLeft} x2={plotRight} y1={y} y2={y} stroke="rgba(255,255,255,.12)" />
@@ -294,129 +221,21 @@ export function DashboardCharts() {
     }
   }, [router])
 
-  const latest = entries[entries.length - 1]
-  const latestScores = latest ? calculateScores(latest) : null
-  const weekly = groupWindow(entries, 7)
-  const monthly = groupWindow(entries, 30)
-  const latestMood = latest ? moods.find(m => m.entry_date === latest.entry_date) : undefined
-  const printableEntries = rangeEntries(entries, reportRange)
+  const metrics = useMemo(
+    () =>
+      calculateScientificDashboardMetrics({
+        entries,
+        moods,
+        gratitude,
+        feedback,
+        reportRange
+      }),
+    [entries, moods, gratitude, feedback, reportRange]
+  )
 
-  const summary = useMemo(() => {
-    const score = (e: DailyEntry) => e.wellbeing_score ?? calculateScores(e).wellbeing_score
-    const energy = (e: DailyEntry) => e.predicted_next_day_energy ?? calculateScores(e).predicted_next_day_energy
-
-    const recentFeedback = feedback.filter(f => {
-      const delta = toNumberOrNull(f.prediction_delta)
-      return f.entry_date >= dateKey(30) && delta !== null
-    })
-
-    const forecastAdjustment = avg(recentFeedback.map(f => toNumberOrNull(f.prediction_delta))) ?? 0
-    const rawNextEnergy = latestScores?.predicted_next_day_energy ?? 0
-
-    const latestStress = toNumberOrNull(latestMood?.stress_score)
-    const stressPenalty = latestStress === null ? 0 : Math.max(0, latestStress - 5) * 4
-
-    return {
-      weeklyWellbeing: avg(weekly.map(e => Number(score(e)))),
-      monthlyWellbeing: avg(monthly.map(e => Number(score(e)))),
-      weeklyEnergy: avg(weekly.map(e => Number(energy(e)))),
-      monthlyEnergy: avg(monthly.map(e => Number(energy(e)))),
-      gratitudeCount: gratitude
-        .filter(g => g.entry_date >= dateKey(30))
-        .reduce((a, b) => a + Number(b.item_count ?? 0), 0),
-      feedbackCount: recentFeedback.length,
-      forecastAdjustment,
-      stressPenalty,
-      personalizedNextEnergy: clampScore(rawNextEnergy + forecastAdjustment - stressPenalty)
-    }
-  }, [weekly, monthly, gratitude, feedback, latestScores, latestMood])
-
-  const nextDayEnergySubtitle = useMemo(() => {
-    if (summary.feedbackCount || summary.stressPenalty > 0) {
-      return `Feedback ${formatSigned(summary.forecastAdjustment)} pts${
-        summary.stressPenalty > 0 ? `, stress -${summary.stressPenalty} pts` : ""
-      }`
-    }
-
-    return "Prediction for tomorrow"
-  }, [summary.feedbackCount, summary.forecastAdjustment, summary.stressPenalty])
-
-  const behaviorTrend = useMemo(() => {
-    if (!moods.length) {
-      return "Add mood entries to reveal behavior patterns across mood, stress, energy and life factors."
-    }
-
-    const recent = moods.slice(-7)
-
-    const avgMood = avg(recent.map(m => scaleTo100(m.mood_score))) ?? 0
-    const avgEnergy = avg(recent.map(m => scaleTo100(m.energy_score))) ?? 0
-    const avgStress = avg(recent.map(m => scaleTo100(m.stress_score))) ?? 0
-
-    const factorCounts = new Map<string, number>()
-
-    recent.forEach(m => {
-      ;(m.factors ?? []).forEach(factor => {
-        factorCounts.set(factor, (factorCounts.get(factor) ?? 0) + 1)
-      })
-    })
-
-    const topFactor = [...factorCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
-
-    if (avgStress >= 70) {
-      return `Recent pattern: stress is high at ${avgStress}/100${
-        topFactor ? ` and often linked with ${topFactor}` : ""
-      }. Reduce overload and protect recovery.`
-    }
-
-    if (avgMood >= 75 && avgEnergy >= 75) {
-      return `Recent pattern: mood and energy are strong${
-        topFactor ? `, with ${topFactor} appearing often` : ""
-      }. Continue this rhythm and observe what sustains it.`
-    }
-
-    if (avgEnergy < 50) {
-      return `Recent pattern: energy is low at ${avgEnergy}/100${
-        topFactor ? ` and often linked with ${topFactor}` : ""
-      }. Improve sleep, food tracking and movement.`
-    }
-
-    return `Recent pattern: mood ${avgMood}/100, energy ${avgEnergy}/100, stress ${avgStress}/100${
-      topFactor ? `. Most common factor: ${topFactor}.` : "."
-    }`
-  }, [moods])
-
-  const managementReport = useMemo(() => {
-    const rows = printableEntries.map(entry => ({
-      entry,
-      scores: calculateScores(entry),
-      mood: moods.find(m => m.entry_date === entry.entry_date)
-    }))
-
-    const wellbeing = avg(rows.map(r => r.scores.wellbeing_score))
-    const energy = avg(rows.map(r => r.scores.predicted_next_day_energy))
-
-    const actualEnergy = avg(
-      rows.map(r => {
-        const actualRaw = firstNumber(r.mood?.energy_score, r.entry.energy_score)
-        return actualRaw === null ? null : actualRaw * 10
-      })
-    )
-
-    const stress = avg(rows.map(r => scaleTo100(r.mood?.stress_score)))
-
-    const weakest = rows.length
-      ? Object.entries(rows[rows.length - 1].scores.dimensions).sort((a, b) => a[1] - b[1])[0]
-      : undefined
-
-    return {
-      rows,
-      wellbeing,
-      energy,
-      actualEnergy,
-      stress,
-      weakest
-    }
-  }, [printableEntries, moods])
+  const latest = metrics.latest
+  const latestScores = metrics.latestScores
+  const latestMood = metrics.latestMood
 
   function printDashboard() {
     window.print()
@@ -475,29 +294,31 @@ export function DashboardCharts() {
       </div>
 
       <span className="kicker">Outcome Dashboard</span>
+
       <h2>Wellbeing, happiness quotient and energy forecast</h2>
+
       <p>
-        Daily, weekly and monthly views compare predicted energy with actual feeling.
-        The model can be tuned as more data is collected.
+        Daily, weekly and monthly views now use trend-aware stress, habit protection,
+        predicted happiness quotient, and actual mood-energy feedback.
       </p>
 
       <section className="grid grid-4">
         <MetricCard
           label="Today Wellbeing"
-          value={latestScores.wellbeing_score}
-          sub={zone(latestScores.wellbeing_score)}
+          value={metrics.revisedWellbeingScore ?? 0}
+          sub={zone(metrics.revisedWellbeingScore ?? latestScores.wellbeing_score)}
         />
 
         <MetricCard
           label="Happiness Quotient"
-          value={latestScores.happiness_quotient}
-          sub="Mood + joy + family + purpose"
+          value={metrics.happinessQuotient ?? 0}
+          sub="Predicted from mood, calmness, gratitude, energy, purpose and relationships"
         />
 
         <MetricCard
           label="Next-Day Energy"
-          value={summary.personalizedNextEnergy}
-          sub={nextDayEnergySubtitle}
+          value={metrics.personalizedNextEnergy}
+          sub={metrics.nextDayEnergySubtitle}
         />
 
         <MetricCard
@@ -507,22 +328,52 @@ export function DashboardCharts() {
         />
       </section>
 
+      <section className="grid grid-4" style={{ marginTop: 16 }}>
+        <MetricCard
+          label="Daily Stress"
+          value={metrics.stressMetrics.dailyStress ?? 0}
+          sub={metrics.stressMetrics.dailyStress === null ? "Not captured" : "Today’s stress load"}
+        />
+
+        <MetricCard
+          label="Weekly Stress"
+          value={metrics.stressMetrics.weeklyStressBurden ?? 0}
+          sub={`${metrics.stressMetrics.attentionLevel} pattern`}
+        />
+
+        <MetricCard
+          label="Monthly Stress"
+          value={metrics.stressMetrics.monthlyStressBurden ?? 0}
+          sub="Sustained stress burden"
+        />
+
+        <MetricCard
+          label="Habit Protection"
+          value={metrics.habitScores.habitProtectionScore}
+          sub={
+            metrics.habitScores.topHabitDrivers.length
+              ? metrics.habitScores.topHabitDrivers.join(", ")
+              : "Meditation, gratitude, sleep, movement and reflection"
+          }
+        />
+      </section>
+
       <section className="grid grid-3" style={{ marginTop: 16 }}>
         <MetricCard
           label="Weekly Wellbeing"
-          value={summary.weeklyWellbeing ?? 0}
-          sub={`${weekly.length} day(s) captured`}
+          value={metrics.weeklyWellbeing ?? 0}
+          sub={`${metrics.weeklyEntries.length} day(s) captured`}
         />
 
         <MetricCard
           label="Monthly Wellbeing"
-          value={summary.monthlyWellbeing ?? 0}
-          sub={`${monthly.length} day(s) captured`}
+          value={metrics.monthlyWellbeing ?? 0}
+          sub={`${metrics.monthlyEntries.length} day(s) captured`}
         />
 
         <MetricCard
           label="Gratitude Items"
-          value={summary.gratitudeCount}
+          value={metrics.gratitudeCount30}
           sub="Last 30 days, private content hidden"
         />
       </section>
@@ -534,9 +385,11 @@ export function DashboardCharts() {
           {Object.entries(latestScores.dimensions).map(([label, score]) => (
             <div className="bar-row" key={label}>
               <span className="small">{label}</span>
+
               <div className="progress">
                 <div style={{ width: `${clampScore(score)}%` }} />
               </div>
+
               <strong>{Math.round(score)}</strong>
             </div>
           ))}
@@ -544,14 +397,14 @@ export function DashboardCharts() {
 
         <div className="form-card ai-assessment-card">
           <div className="ai-assessment-head">
-            <span className="kicker">AI assessment</span>
+            <span className="kicker">Scientific AI assessment</span>
             <span className="ai-badge">Daily reflection</span>
           </div>
 
           <h3>{latestScores.ai_assessment}</h3>
 
           <div className="ai-pattern">
-            {behaviorTrend}
+            {metrics.aiSummary}
           </div>
 
           <div className="ai-metrics">
@@ -572,17 +425,14 @@ export function DashboardCharts() {
           </div>
 
           <p>
-            {summary.feedbackCount
-              ? `Energy learning: across ${summary.feedbackCount} saved day(s), actual energy has been ${
-                  summary.forecastAdjustment >= 0 ? "higher" : "lower"
-                } than predicted by ${Math.abs(summary.forecastAdjustment)} points on average. Future predictions are adjusted using this gap. ${
-                  summary.stressPenalty > 0
-                    ? `Current stress is also reducing the next-day energy forecast by ${summary.stressPenalty} points.`
-                    : "No stress penalty is currently applied."
-                }`
-              : summary.stressPenalty > 0
-                ? `Current stress is reducing the next-day energy forecast by ${summary.stressPenalty} points. Save more mood logs to personalize future predictions.`
-                : "Save mood actual energy after daily entry to compare predicted and actual energy."}
+            Stress direction: <strong>{metrics.stressMetrics.stressTrendLabel}</strong>.{" "}
+            Weekly stress burden: <strong>{formatScore(metrics.stressMetrics.weeklyStressBurden)}</strong>.{" "}
+            Monthly stress burden: <strong>{formatScore(metrics.stressMetrics.monthlyStressBurden)}</strong>.
+          </p>
+
+          <p>
+            Habit protection: <strong>{formatScore(metrics.habitScores.habitProtectionScore)}</strong>.{" "}
+            Happiness quotient: <strong>{formatScore(metrics.happinessQuotient)}</strong>.
           </p>
         </div>
       </section>
@@ -602,48 +452,50 @@ export function DashboardCharts() {
         <div className="report-grid">
           <div>
             <span>Captured days</span>
-            <strong>{managementReport.rows.length}</strong>
+            <strong>{metrics.managementReport.rows.length}</strong>
           </div>
 
           <div>
             <span>Avg wellbeing</span>
-            <strong>{managementReport.wellbeing ?? "-"}</strong>
+            <strong>{metrics.managementReport.wellbeing ?? "-"}</strong>
           </div>
 
           <div>
             <span>Predicted energy</span>
-            <strong>{managementReport.energy ?? "-"}</strong>
+            <strong>{metrics.managementReport.energy ?? "-"}</strong>
           </div>
 
           <div>
             <span>Actual energy</span>
-            <strong>{managementReport.actualEnergy ?? "-"}</strong>
+            <strong>{metrics.managementReport.actualEnergy ?? "-"}</strong>
           </div>
 
           <div>
             <span>Stress load</span>
-            <strong>{managementReport.stress ?? "-"}</strong>
+            <strong>{metrics.managementReport.stress ?? "-"}</strong>
           </div>
 
           <div>
             <span>Focus area</span>
-            <strong>{managementReport.weakest?.[0] ?? "Capture more data"}</strong>
+            <strong>{metrics.managementReport.weakest?.[0] ?? "Capture more data"}</strong>
           </div>
         </div>
 
-        <p>{behaviorTrend}</p>
+        <p>{metrics.behaviorTrend}</p>
 
         <p>
-          Recommended management action: protect sleep recovery, track mood factors, and focus the next improvement cycle on{" "}
-          {managementReport.weakest?.[0] ?? "the weakest dimension"}.
+          Recommended management action: {metrics.managementReport.recommendedAction}
         </p>
       </section>
 
       <section className="dashboard-disclaimer notice" style={{ marginTop: 16 }}>
         <strong>Disclaimer</strong>
+
         <p>
           This dashboard is a wellbeing reflection tool, not a medical diagnosis or treatment recommendation.
-          The word "quantum" is used as a metaphor for multi-state thinking, disciplined attention and error correction in the mind.
+          The happiness quotient and stress indicators are reflective estimates based on captured habits,
+          mood, energy and stress patterns. The word "quantum" is used as a metaphor for multi-state thinking,
+          disciplined attention and error correction in the mind.
         </p>
       </section>
     </div>
